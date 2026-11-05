@@ -1,5 +1,14 @@
 # React + Vite
 
+## Demo authentication
+
+The Login and Register screens are a client-side demo. Account records and the
+signed-in state are saved in the browser's local storage. Passwords are stored
+as salted PBKDF2 hashes, not plaintext, but this is not secure authentication:
+users can modify local storage or bypass the client. Do not use this flow for
+real accounts or sensitive data; production authentication requires a trusted
+backend.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
