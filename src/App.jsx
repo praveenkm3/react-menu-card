@@ -1,8 +1,11 @@
+import { useState, useEffect } from "react"
 import "./App.css"
 import Header from "./components/Header"
 import Content from "./components/Content"
 import Footer from "./components/Footer"
 import NavBar from "./components/Navbar"
+import Loading from "./components/Loading"
+import Auth from "./components/Auth"
 
 let obj1={itemname:"Tea",price:10,time:5,cook:"Mike tyson"}
 let obj2={itemname:"Coffee",price:15,time:10,cook:"Virat Kohli"}
@@ -31,16 +34,83 @@ return(
 
 
 function App(){
+  const [isLoading,setIsLoading]=useState(true);
+  const [authState,setAuthState]=useState(()=>{
+    try {
+      const storedSession=localStorage.getItem("menucard-session");
+      if (!storedSession) {
+        return { user:null, error:"" };
+      }
+
+      const user=JSON.parse(storedSession);
+      if (!user || typeof user.name !== "string" || typeof user.email !== "string") {
+        throw new Error("Saved session data is invalid. Log in again after clearing this app's local storage.");
+      }
+
+      return { user, error:"" };
+    } catch (error) {
+      return {
+        user:null,
+        error:error instanceof Error ? error.message : "Unable to read the saved session."
+      };
+    }
+  });
+  const [authMode,setAuthMode]=useState(()=>authState.user ? "home" : "login");
+
+  useEffect(()=>{
+    const timer=setTimeout(()=>{
+      setIsLoading(false);
+    },800);
+    return ()=>clearTimeout(timer);
+  },[]);
+
   return(
     <>
-    <NavBar/>
-    
-    
-    <div className="model">
-      {objects.map((item,index)=>{
-        return <Recipe item={item} key={index}/>
-      })}
-    </div>
+    <NavBar
+      onNavigate={mode=>{
+        setAuthMode(!authState.user && mode === "home" ? "login" : mode);
+      }}
+      onLogout={()=>{
+        try {
+          localStorage.removeItem("menucard-session");
+          setAuthState({ user:null, error:"" });
+          setAuthMode("login");
+        } catch (error) {
+          setAuthState(previousState => ({
+            ...previousState,
+            error:error instanceof Error ? error.message : "Unable to log out."
+          }));
+        }
+      }}
+      user={authState.user}
+    />
+    <main className="page-container">
+      {authState.error && <p className="auth-error" role="alert">{authState.error}</p>}
+      {!authState.user || authMode === "login" || authMode === "register" ? (
+        <Auth
+          mode={authMode === "register" ? "register" : "login"}
+          onAuthenticated={user => {
+            setAuthState({ user, error:"" });
+            setAuthMode("home");
+          }}
+          onModeChange={setAuthMode}
+        />
+      ) : (
+        <>
+          <h1 className="page-title">Our Menu</h1>
+          <p className="page-subtitle">Freshly brewed drinks, made to order</p>
+          {isLoading ? (
+            <Loading label="Loading menu..."/>
+          ) : (
+            <div className="model">
+              {objects.map((item)=>{
+                return <Recipe item={item} key={item.itemname}/>
+              })}
+            </div>
+          )}
+        </>
+      )}
+    </main>
     </>
   );
 }
